@@ -1,0 +1,4 @@
+pong
+*.o
+*.swp
+cli.h
