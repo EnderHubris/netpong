@@ -1,0 +1,68 @@
+#include "ball.h"
+
+// returns only positive
+static int getRandomDir(int max) {
+    return (rand() % max) + 1;
+}
+
+// returns positive or negative
+static int getRandomSignedDir(int max) {
+    int rDir = getRandomDir(max);
+    return (rand() % 5 == 2) ? rDir : -rDir;
+}
+
+Ball* ballInit() {
+    srand(time(NULL));
+
+    Ball* ball = malloc(sizeof(Ball));
+    if (!ball) {
+        perror("malloc");
+        exit(1);
+    }
+
+    ball->x = ball->originX = WIDTH/2;
+    ball->y = ball->originY = HEIGHT/2;
+
+    ball->velx = getRandomDir(MAX_VEL_X);
+    ball->vely = getRandomSignedDir(MAX_VEL_Y);
+
+    return ball;
+}
+
+/**
+ * reset the ball to origin and
+ * give it a new initial random vel
+ */
+void reset(Ball* ball) {
+    if (!ball) return;
+
+    ball->x = ball->originX;
+    ball->y = ball->originY;
+
+    ball->velx = getRandomDir(MAX_VEL_X);
+    ball->vely = getRandomSignedDir(MAX_VEL_Y);
+}
+
+void checkCollision(Ball* ball) {
+    if (!ball) return;
+    
+    //if (ball->x <= 1 || ball->x >= WIDTH-2) {
+    if (ball->x <= 1) {
+        ball->velx *= -1;
+    }
+
+    if (ball->y <= 1 || ball->y >= HEIGHT-2) {
+        ball->vely *= -1;
+    }
+}
+
+void hitPaddle(Ball* ball) {
+    ball->velx = -1;
+
+    int dirY = ball->vely / ball->vely;
+    ball->vely = getRandomDir(MAX_VEL_Y) * -dirY;
+
+    // make the ball move faster on screen
+    int tick_rate = TICKS_PER_SEC + (rand() % 11);
+    setTicker(1000/tick_rate);
+}
