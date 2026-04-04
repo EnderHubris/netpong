@@ -35,7 +35,7 @@ static void refreshCourt() {
  */
 void setup(int playerId) {
     // initialize game state components
-    pongState.paddle = paddleInit();
+    pongState.paddle = paddleInit(playerId);
 
     // set playerId
     pongState.playerId = playerId;

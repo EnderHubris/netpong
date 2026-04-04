@@ -1,13 +1,15 @@
 #include "paddle.h"
 
-Paddle* paddleInit() {
+Paddle* paddleInit(int playerId) {
     Paddle* paddle = malloc(sizeof(Paddle));
     if (!paddle) {
         perror("malloc");
         exit(1);
     }
     
-    paddle->x = WIDTH - 2;
+    // player 1 the paddle is on the left
+    // player 2 the paddle is on the right
+    paddle->x = (playerId == 1) ? WIDTH - (PADDLE_BASE_X+1) : PADDLE_BASE_X;
     paddle->y = 1;
 
     return paddle;

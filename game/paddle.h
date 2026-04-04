@@ -9,6 +9,7 @@
 #include "rules.h"
 
 #define PADDLE_SIZE 6
+#define PADDLE_BASE_X 8
 
 /**
  * Paddle has a pivot (x,y) where x is fixed
