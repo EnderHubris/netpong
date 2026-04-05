@@ -17,15 +17,17 @@ game_o:
 # build rules focusing on SERVER
 server_o:
 	gcc -c $(CC_FLAGS) server/server.c -o server.o
+client_o:
+	gcc -c $(CC_FLAGS) server/client.c -o client.o
 str_utils_o:
 	gcc -c $(CC_FLAGS) utils.c -o utils.o
 
 # generic rules
-build: rules_o paddle_o ball_o game_o str_utils_o server_o
+build: rules_o paddle_o ball_o game_o str_utils_o server_o client_o
 	# download cli.h used in main.c
 	curl -kLO 'https://github.com/EnderHubris/CCLI/raw/refs/heads/main/cli.h'
 	# compile project
-	gcc $(CC_FLAGS) main.c utils.o server.o rules.o game.o paddle.o ball.o -o pong $(LD_FLAGS)
+	gcc $(CC_FLAGS) main.c utils.o server.o client.o rules.o game.o paddle.o ball.o -o pong $(LD_FLAGS)
 
 clean_o:
 	rm -f *.o
