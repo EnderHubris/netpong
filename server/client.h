@@ -21,6 +21,9 @@ typedef struct {
     struct sockaddr_in server_addr;
 } Client;
 Client* pclient = NULL;
+Client* getClientPtr() {
+    return pclient;
+}
 
 static void killClient() {
     if (!pclient) return;

@@ -20,7 +20,7 @@ static int isDown(int ch) {
 // run in current process
 static void InitGame(int playerId) {
     setup(playerId);
-    // serve();
+    // if (playerId == 0) serve();
     
     // game main loop
     int ch;
@@ -40,7 +40,7 @@ static void InitGame(int playerId) {
  * Net-Pong game initiator will create a game server
  * that both players connect to
  */
-static pid_t HostGame(int serverPort) {
+static pid_t HostGame(int write_fd, int serverPort) {
     pid_t cpid = fork();
 
     if (cpid < 0) {
@@ -50,7 +50,7 @@ static pid_t HostGame(int serverPort) {
 
     if (cpid == 0) {
         printf("[!] Pong-Server is Starting\n");
-        RunServer(serverPort);
+        RunServer(write_fd, serverPort);
         exit(0);
     }
 
@@ -91,12 +91,33 @@ int main(int argc, char** argv) {
     parseCLI(&app, argc, argv);
 
     if (!serverHost) {
+        // create pipe used for IPC
+        int pipefd[2];
+        // pipefd[0] = parent reads, pipefd[1] = child writes
+        pipe(pipefd);
+
         // this is Player 1
-        pid_t server_p = HostGame(serverPort);
+        pid_t server_p = HostGame(pipefd[1], serverPort);
+
+        // allow the server time to start up before connecting
+        sleep(1);
 
         // player 1 socket
         pid_t sock_p = ConnectToGame(serverHost, serverPort);
 
+        // wait for player 2 to connect
+        // when player 2 connects the pipe will recv data
+        close(pipefd[1]);
+        char buf[100] = {0};
+        while (1) {
+            // wait for child to send via the pipe
+            ssize_t n = read(pipefd[0], buf, 99);
+            if (n == 0) continue;
+            buf[n] = '\0';
+            if (strcmp(buf, "START") == 0) break;
+        }
+
+        printf("[!] Net-Pong Starting\n");
         InitGame(0);
         printf(" |___ Pong Game Exited\n");
 
@@ -110,17 +131,19 @@ int main(int argc, char** argv) {
 
         printf("[!] Net-Pong Exiting\n");
     } else {
-        /*
         // this is Player 2
         printf("[+] Connecting -> %s %d\n", serverHost, serverPort);
         
         // player 2 socket
-        ConnectToGame(serverHost, serverPort);
+        pid_t sock_p = ConnectToGame(serverHost, serverPort);
         
         InitGame(1);
-        wait(NULL);
         printf(" |___ Pong Game Exited\n");
-        */
+
+        kill(sock_p, SIGTERM);
+        
+        waitpid(sock_p, NULL, 0);
+        printf("[!] Net-Pong Exiting\n");
     }
 
     return 0;
