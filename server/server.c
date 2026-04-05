@@ -70,7 +70,7 @@ static void ListenForClient(int client) {
     close(client);
 }
 
-int RunServer(int write_fd, int port) {
+int RunServer(int port) {
     Server server = {0};
     pserver = &server;
 
@@ -168,7 +168,7 @@ int RunServer(int write_fd, int port) {
     }
 
     // inform player 1 that both players have joined
-    write(write_fd, "START", strlen("START"));
+    kill(getppid(), SIGUSR1);
 
     // wait for child connections to die
     for (int i = 0; i < server.clientsConnected; i++) {

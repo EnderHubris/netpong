@@ -92,7 +92,15 @@ int gameRunning(int* ch) {
     return (pongState.ballCount < GAMEOVER) && ( *ch != (int)'q' );
 }
 int ballInPlay() {
-    return pongState.ball->x < pongState.paddle->x;
+    int inPlay = (pongState.playerId == 1) ? (
+        // player 2
+        pongState.ball->x < pongState.paddle->x
+    ) : (
+        // player 1
+        pongState.ball->x > pongState.paddle->x
+    );
+
+    return inPlay;
 }
 
 void moveUp() {
@@ -137,7 +145,7 @@ void ballHandle() {
         if (paddleContact(pongState.paddle, ball->x, ball->y)) {
             hitPaddle(ball);
         } else {
-            checkCollision(ball);
+            checkCollision(ball, pongState.playerId);
         }
     }
 

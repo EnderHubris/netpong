@@ -43,16 +43,26 @@ void reset(Ball* ball) {
     ball->vely = getRandomSignedDir(MAX_VEL_Y);
 }
 
-void checkCollision(Ball* ball) {
+void checkCollision(Ball* ball, int playerId) {
     if (!ball) return;
     
-    //if (ball->x <= 1 || ball->x >= WIDTH-2) {
-    if (ball->x <= 1) {
-        ball->velx *= -1;
-    }
-
+    // top and bottom wall hits
     if (ball->y <= 1 || ball->y >= HEIGHT-2) {
         ball->vely *= -1;
+    }
+
+    if (playerId == 1) {
+        // player 2
+        if (ball->x <= 1) {
+            // cross court threshold
+            ball->x = WIDTH/2;
+        }
+    } else {
+        // player 1
+        if (ball->x >= WIDTH) {
+            // cross court threshold
+            ball->x = WIDTH/2;
+        }
     }
 }
 

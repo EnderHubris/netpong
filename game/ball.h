@@ -22,7 +22,7 @@ typedef struct {
 
 Ball* ballInit();
 void reset(Ball* ball);
-void checkCollision(Ball* ball);
+void checkCollision(Ball* ball, int playerId);
 void hitPaddle(Ball* ball);
 
 #endif
