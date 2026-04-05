@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -19,6 +20,13 @@ typedef struct {
 
     struct sockaddr_in server_addr;
 } Client;
+Client* pclient = NULL;
+
+static void killClient() {
+    if (!pclient) return;
+    close(pclient->client_fd);
+    exit(2);
+}
 
 static Client CreateClient() {
     Client client = { 0 };
@@ -30,11 +38,23 @@ static Client CreateClient() {
     return client;
 }
 
-int InitClient(char* hostStr, int port) {
+static void ListenToServer(Client* client) {
+    char buffer[BUFF_LEN] = { 0 };
+
+    while (client) {
+        // subtract 1 for the null-terminator at the end
+        int read_amount = BUFF_LEN - 1;
+        // recv from server
+        client->bytesRecv = read(client->client_fd, buffer, read_amount);
+        //printf("%s\n", buffer);
+    }
+}
+
+int RunClient(char* hostStr, int port) {
     Client client = CreateClient();
+    pclient = &client;
 
     char* msg = "Hello from client";
-    char buffer[BUFF_LEN] = { 0 };
 
     if (client.client_fd < 0) {
         perror("socket");
@@ -47,7 +67,7 @@ int InitClient(char* hostStr, int port) {
     // convert host string to binary format
     int inet_ret = inet_pton(
         AF_INET,
-        hostStr,
+        hostStr ? hostStr : "127.0.0.1",
         &client.server_addr.sin_addr);
     if (inet_ret != 1) {
         perror("inet_pton");
@@ -67,15 +87,14 @@ int InitClient(char* hostStr, int port) {
         return -1;
     }
 
+    signal(SIGINT, killClient);  // ctrl+c
+    signal(SIGTERM, killClient); // kill
+
     // send message to server
     send(client.client_fd, msg, strlen(msg), 0);
-    printf("Hello message sent\n");
+    // ("Hello message sent\n");
 
-    // subtract 1 for the null-terminator at the end
-    int read_amount = BUFF_LEN - 1;
-    // recv from server
-    client.bytesRecv = read(client.client_fd, buffer, read_amount);
-    printf("%s\n", buffer);
+    ListenToServer(&client);
 
     // close client socket
     close(client.client_fd);

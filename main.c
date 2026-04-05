@@ -5,6 +5,8 @@
 #include "cli.h" // custom c import i developed -> https://github.com/EnderHubris/CCLI
 
 #include "server/server.h"
+#include "server/client.h"
+
 #include "game/game.h"
 
 static int isUp(int ch) {
@@ -34,6 +36,49 @@ static void InitGame(int playerId) {
     cleanCurses();
 }
 
+/**
+ * Net-Pong game initiator will create a game server
+ * that both players connect to
+ */
+static pid_t HostGame(int serverPort) {
+    pid_t cpid = fork();
+
+    if (cpid < 0) {
+        perror("fork");
+        exit(1);
+    }
+
+    if (cpid == 0) {
+        printf("[!] Pong-Server is Starting\n");
+        RunServer(serverPort);
+        exit(0);
+    }
+
+    printf(" |___ Pong-Server is Active!\n");
+    return cpid;
+}
+
+/**
+ * Net-Pong creators create a socket connect to the
+ * game server
+ */
+static pid_t ConnectToGame(char* serverHost, int serverPort) {
+    pid_t cpid = fork();
+
+    if (cpid < 0) {
+        perror("fork");
+        exit(1);
+    }
+
+    if (cpid == 0) {
+        RunClient(serverHost, serverPort);
+        exit(0);
+    }
+
+    printf("[!] Pong-Client is Active!\n");
+    return cpid;
+}
+
 int main(int argc, char** argv) {
     int serverPort = 6254;
     char* serverHost = NULL;
@@ -46,31 +91,36 @@ int main(int argc, char** argv) {
     parseCLI(&app, argc, argv);
 
     if (!serverHost) {
-        // this is server
-        pid_t cpid = fork();
+        // this is Player 1
+        pid_t server_p = HostGame(serverPort);
 
-        if (cpid < 0) {
-            perror("fork");
-            return 1;
-        }
-
-        // child runs the socket server
-        if (cpid == 0) {
-            exit(RunServer(serverPort));
-        }
-
-        // parent does parantal tasks
-        printf("[!] Pong-Server is Active!\n");
+        // player 1 socket
+        pid_t sock_p = ConnectToGame(serverHost, serverPort);
 
         InitGame(0);
-
         printf(" |___ Pong Game Exited\n");
-        wait(NULL);
+
+        // send kill signal to PIDs
+        kill(sock_p, SIGTERM);
+        kill(server_p, SIGTERM);
+
+        // wait for pids to die
+        waitpid(sock_p, NULL, 0);
+        waitpid(server_p, NULL, 0);
+
         printf("[!] Net-Pong Exiting\n");
     } else {
-        // this is client
+        /*
+        // this is Player 2
         printf("[+] Connecting -> %s %d\n", serverHost, serverPort);
+        
+        // player 2 socket
+        ConnectToGame(serverHost, serverPort);
+        
         InitGame(1);
+        wait(NULL);
+        printf(" |___ Pong Game Exited\n");
+        */
     }
 
     return 0;

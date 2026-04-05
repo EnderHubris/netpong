@@ -12,5 +12,7 @@ int setTicker(int nMSecs){
     newTimeset.it_value.tv_sec=nSec;
     newTimeset.it_value.tv_usec=nUSecs;
 
+    // after the timer expires SIGALRM is sent to the process
+    // this is the trigger for the signal(SIGALRM, foo);
     return setitimer(ITIMER_REAL,&newTimeset,NULL);
 }

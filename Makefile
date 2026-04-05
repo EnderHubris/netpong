@@ -2,7 +2,7 @@ LD_FLAGS = -lncurses
 CC_FLAGS = -Wall -Wextra
 
 all: build clean_o
-	./pong
+	./pong -h
 
 # build rules focusing on PONG game
 rules_o:

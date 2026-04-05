@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -19,19 +20,45 @@ typedef struct {
     
     int clientsConnected;
     int clients[2];
+    pid_t pids[2];
 
     struct sockaddr_in address;
 } Server;
+Server* pserver = NULL;
 
+int running = 1;
+static void serverKill() {
+    running = 0;
+    if (!pserver) return;
+
+    // closing the server interupts blocking accept
+    close(pserver->server_fd);
+
+    // close conenctions
+    for (int i = 0; i < pserver->clientsConnected; ++i) {
+        // prevent read/write from client_fd (helps for graceful shutdown)
+        shutdown(pserver->clients[i], SHUT_RDWR);
+        // close client_fd
+        close(pserver->clients[i]);
+    }
+
+    // ask children procs to die
+    for (int i = 0; i < pserver->clientsConnected; ++i) {
+        kill(pserver->pids[i], SIGTERM);
+    }
+
+    // potentially interupted or kill requested
+    exit(2);
+}
+
+// thread target for listening to incoming client msgs
 static void ListenForClient(int client) {
     char* msg = "Hello from server!";
 
     char buffer[BUFF_LEN] = { 0 };
     ssize_t bytesRecv;
 
-    printf("%s\n", buffer);
     send(client, msg, strlen(msg), 0);
-    printf("Hello message sent\n");
 
     while (1) {
         // subtract 1 for the null-terminator at the end
@@ -45,11 +72,10 @@ static void ListenForClient(int client) {
             }
         }
 
-        printf("[*] Recv (%lu) -> %s\n", bytesRecv, buffer);
-
+        //printf("[*] Recv (%lu) -> %s\n", bytesRecv, buffer);
+        
         // split the recv buffer
         Strings res = SplitStr(buffer, ' ');
-        printf(" |___ split count (%i)\n", res.stringCount);
 
         // the split results should have the format
         // [ TYPE DATA ]
@@ -57,20 +83,20 @@ static void ListenForClient(int client) {
 
         if (strcmp("SCORE", res.strs[0]) == 0) {
             // expecting 1 or 2
-            printf("Player %s has scored!\n", res.strs[1]);
+            //printf("Player %s has scored!\n", res.strs[1]);
         } else if (strcmp("PASS", res.strs[0]) == 0) {
             // expecting 1 or 2
-            printf("Ball has left court %s\n", res.strs[1]);
+            //printf("Ball has left court %s\n", res.strs[1]);
         }
     }
 
     // closing the connected socket
-    printf("[*] Closing Connection. . .");
     close(client);
 }
 
 int RunServer(int port) {
     Server server = {0};
+    pserver = &server;
 
     int opt = 1;
     socklen_t addrlen = sizeof(server.address);
@@ -114,12 +140,13 @@ int RunServer(int port) {
         return EXIT_FAILURE;
     }
 
-    printf("[+] Server Active -> 127.0.0.1:%i\n", port);
-
     if (listen(server.server_fd, 3) < 0) {
         perror("listen");
         return EXIT_FAILURE;
     }
+
+    signal(SIGINT, serverKill);  // ctrl+c
+    signal(SIGTERM, serverKill);
 
     // accept only two incoming connections
     // (left player and right player)
@@ -132,31 +159,40 @@ int RunServer(int port) {
             &addrlen
         );
 
-        printf("[!] Detect Incoming Connection\n");
+        if (server.clients[clientId] < 0) {
+            if (!running) break; // kill server early
+            continue;
+        }
     
         if (server.clients[clientId] < 0) {
             perror("accept");
             return EXIT_FAILURE;
         }
 
-        printf(" |___ Accepted Connection!\n");
-
         // create another child proc for the clients
         pid_t cpid = fork();
 
         if (cpid < 0) {
             perror("fork");
+            serverKill();
+            exit(1);
         } else if (cpid == 0) {
             // child operation
             ListenForClient(server.clients[clientId]);
+            exit(0);
         }
+
+        // track the new children pids
+        server.pids[clientId] = cpid;
 
         // when a client connects increment
         ++server.clientsConnected;
     }
 
     // wait for child connections to die
-    wait(NULL);
+    for (int i = 0; i < server.clientsConnected; i++) {
+        waitpid(server.pids[i], NULL, 0);
+    }
   
     // closing the listening socket
     close(server.server_fd);
