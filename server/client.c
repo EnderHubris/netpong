@@ -27,6 +27,19 @@ static void ListenToServer(Client* client) {
         // recv from server
         client->bytesRecv = read(client->client_fd, buffer, read_amount);
         //printf("%s\n", buffer);
+        
+        if (client->bytesRecv > 0) {
+            buffer[client->bytesRecv] = '\0';
+        } else if (client->bytesRecv == 0) {
+            // server closed the socket
+            kill(getppid(), SIGTERM);
+            break;
+        } else {
+            // some error
+            perror("read");
+            kill(getppid(), SIGTERM);
+            break;
+        }
     }
 }
 
