@@ -18,18 +18,26 @@ static Client CreateClient() {
     return client;
 }
 
+/*
 static void ListenToServer(Client* client) {
     char buffer[BUFF_LEN] = { 0 };
-
+    
     while (client) {
         // subtract 1 for the null-terminator at the end
         int read_amount = BUFF_LEN - 1;
         // recv from server
         client->bytesRecv = read(client->client_fd, buffer, read_amount);
-        //printf("%s\n", buffer);
         
         if (client->bytesRecv > 0) {
+            // handle recv data
             buffer[client->bytesRecv] = '\0';
+            
+            // split the recv buffer
+            Strings res = SplitStr(buffer, ' ');
+            
+            // the split results should have the format
+            // [ TYPE DATA ]
+            if (res.stringCount == 0) continue;
         } else if (client->bytesRecv == 0) {
             // server closed the socket
             kill(getppid(), SIGTERM);
@@ -42,12 +50,19 @@ static void ListenToServer(Client* client) {
         }
     }
 }
+*/
 
+/**
+ * Creates the socket_fd and returns it so it can
+ * be used for read/write purposes
+ */
 int RunClient(char* hostStr, int port) {
     Client client = CreateClient();
     pclient = &client;
 
     char* msg = "Hello from client";
+
+    printf("[*] Creating Socket\n");
 
     if (client.client_fd < 0) {
         perror("socket");
@@ -91,9 +106,7 @@ int RunClient(char* hostStr, int port) {
     send(client.client_fd, msg, strlen(msg), 0);
     // ("Hello message sent\n");
 
-    ListenToServer(&client);
+    printf(" |___ Socket created successfully!\n");
 
-    // close client socket
-    close(client.client_fd);
-    return 0;
+    return client.client_fd;
 }

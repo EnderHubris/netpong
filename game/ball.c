@@ -43,7 +43,25 @@ void reset(Ball* ball) {
     ball->vely = getRandomSignedDir(MAX_VEL_Y);
 }
 
-void checkCollision(Ball* ball, int playerId) {
+static void SignalPass(Ball* ball, int socket_fd) {
+    char passMsg[124];
+    snprintf(passMsg, sizeof(passMsg), "PASS %d %d %d %d\n",
+        ball->x,
+        ball->y,
+        ball->velx,
+        ball->vely
+    );
+    write(socket_fd, passMsg, strlen(passMsg));
+}
+
+static void HideBall(Ball* ball) {
+    ball->x = WIDTH/2;
+    ball->y = HEIGHT/2;
+
+    ball->velx = ball->vely = 0;
+}
+
+void checkCollision(Ball* ball, int playerId, int socket_fd) {
     if (!ball) return;
     
     // top and bottom wall hits
@@ -55,13 +73,15 @@ void checkCollision(Ball* ball, int playerId) {
         // player 2
         if (ball->x <= 1) {
             // cross court threshold
-            ball->x = WIDTH/2;
+            SignalPass(ball, socket_fd);
+            HideBall(ball);
         }
     } else {
         // player 1
         if (ball->x >= WIDTH) {
             // cross court threshold
-            ball->x = WIDTH/2;
+            SignalPass(ball, socket_fd);
+            HideBall(ball);
         }
     }
 }

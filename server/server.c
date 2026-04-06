@@ -27,8 +27,19 @@ static void serverKill() {
     exit(2);
 }
 
+static void PassBall(int ballData[4], int socket_fd) {
+    char passMsg[124];
+    snprintf(passMsg, sizeof(passMsg), "BALL %d %d %d %d\n",
+        ballData[0],
+        ballData[1],
+        ballData[2],
+        ballData[3]
+    );
+    write(socket_fd, passMsg, strlen(passMsg));
+}
+
 // thread target for listening to incoming client msgs
-static void ListenForClient(int client) {
+static void ListenForClient(int client, int playerId) {
     char* msg = "Hello from server!";
 
     char buffer[BUFF_LEN] = { 0 };
@@ -47,22 +58,34 @@ static void ListenForClient(int client) {
                 break;
             }
         }
-
-        //printf("[*] Recv (%lu) -> %s\n", bytesRecv, buffer);
         
         // split the recv buffer
         Strings res = SplitStr(buffer, ' ');
 
         // the split results should have the format
         // [ TYPE DATA ]
-        if (res.stringCount != 2) continue;
+        if (res.stringCount == 0) continue;
+        if (!pserver) break;
 
         if (strcmp("SCORE", res.strs[0]) == 0) {
-            // expecting 1 or 2
-            //printf("Player %s has scored!\n", res.strs[1]);
         } else if (strcmp("PASS", res.strs[0]) == 0) {
-            // expecting 1 or 2
-            //printf("Ball has left court %s\n", res.strs[1]);
+            if (res.stringCount != 5) continue;
+
+            // extract ball data [1:4]
+            int ballData[4] = {0};
+            for (int i = 0; i < 4; ++i) {
+                ballData[i] = atoi(res.strs[i+1]);
+            }
+
+            if (playerId == 0) {
+                // alert player 2
+                ballData[0] = 2; // change x position to be valid to respective player area
+                PassBall(ballData, pserver->clients[1]);
+            } else {
+                // alert player 1
+                ballData[0] = 68; // rules.h (WIDTH-2)
+                PassBall(ballData, pserver->clients[0]);
+            }
         }
     }
 
@@ -145,27 +168,30 @@ int RunServer(int port) {
             return EXIT_FAILURE;
         }
 
-        // printf("[!] Player has Connected!\n");
+        // when a client connects increment
+        ++server.clientsConnected;
+    }
 
+    // make fork after both clients connect so the forks
+    // (children) can use the socket_fds defined in the parent
+    for (int i = 0; i < server.clientsConnected; ++i) {
         // create another child proc for the clients
         pid_t cpid = fork();
-
+    
         if (cpid < 0) {
             perror("fork");
             serverKill();
             exit(1);
         } else if (cpid == 0) {
             // child operation
-            ListenForClient(server.clients[clientId]);
+            ListenForClient(server.clients[i], i);
             exit(0);
         }
 
         // track the new children pids
-        server.pids[clientId] = cpid;
-
-        // when a client connects increment
-        ++server.clientsConnected;
+        server.pids[i] = cpid;
     }
+
 
     // inform player 1 that both players have joined
     kill(getppid(), SIGUSR1);

@@ -5,9 +5,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+
 #include <signal.h>
 #include <sys/time.h>
+#include <sys/select.h>
 
 #include "rules.h"
 
@@ -15,23 +18,29 @@
 #include "paddle.h"
 #include "ball.h"
 
+#include "../utils.h"
+
 typedef struct {
     Paddle* paddle;
     Ball* ball;
     WINDOW* scene;
     int ballCount;
     int playerId;
+    int socket_fd;
+    int running;
 } Pong;
 
 extern Pong pongState;
 
 int ballInPlay();
 
-void setup(int playerId);
+void setup(int playerId, char* hostStr, int port);
 void cleanCurses();
+void closeGame();
 
-void serve();
+void serve(int playerId);
 int gameRunning(int* ch);
+void checkForChange();
 
 void moveUp();
 void moveDown();

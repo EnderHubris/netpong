@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include "../utils.h"
+
 #define BUFF_LEN 1024
 
 typedef struct {

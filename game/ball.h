@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
 #include <time.h>
@@ -22,7 +23,7 @@ typedef struct {
 
 Ball* ballInit();
 void reset(Ball* ball);
-void checkCollision(Ball* ball, int playerId);
+void checkCollision(Ball* ball, int playerId, int socket_fd);
 void hitPaddle(Ball* ball);
 
 #endif
