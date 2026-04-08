@@ -2,6 +2,7 @@
 
 Server* pserver = NULL;
 int running = 1;
+int GameScore[2] = { 0,0 };
 
 static void serverKill() {
     running = 0;
@@ -27,6 +28,10 @@ static void serverKill() {
     exit(2);
 }
 
+/**
+ * Sends the current position of the ball in a player's court
+ * after a pass is initiated
+ */
 static void PassBall(int ballData[4], int socket_fd) {
     char passMsg[124];
     snprintf(passMsg, sizeof(passMsg), "BALL %d %d %d %d\n",
@@ -36,6 +41,29 @@ static void PassBall(int ballData[4], int socket_fd) {
         ballData[3]
     );
     write(socket_fd, passMsg, strlen(passMsg));
+}
+
+/**
+ * Sends the current score the server is tracking to
+ * a player socket
+ */
+static void SendScore(int socket_fd) {
+    char scoreMsg[124];
+    snprintf(scoreMsg, sizeof(scoreMsg), "SCORE %d:%d\n",
+        GameScore[0],
+        GameScore[1]
+    );
+    write(socket_fd, scoreMsg, strlen(scoreMsg));
+}
+
+/**
+ * Send a signal to a player to serve the ball after
+ * a score update
+ */
+static void SendServe(int socket_fd) {
+    char reserveMsg[124];
+    snprintf(reserveMsg, sizeof(reserveMsg), "SERVE \n");
+    write(socket_fd, reserveMsg, strlen(reserveMsg));
 }
 
 // thread target for listening to incoming client msgs
@@ -68,6 +96,16 @@ static void ListenForClient(int client, int playerId) {
         if (!pserver) break;
 
         if (strcmp("SCORE", res.strs[0]) == 0) {
+            if (res.stringCount != 2) continue;
+
+            int victorId = atoi(res.strs[1]); // 0 or 1
+            ++GameScore[victorId];
+
+            SendScore(pserver->clients[0]);
+            SendScore(pserver->clients[1]);
+
+            // round victor re-serves the ball
+            SendServe(pserver->clients[victorId]);
         } else if (strcmp("PASS", res.strs[0]) == 0) {
             if (res.stringCount != 5) continue;
 

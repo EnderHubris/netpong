@@ -27,6 +27,8 @@ typedef struct {
 extern Server* pserver;
 extern int running;
 
+extern int GameScore[2];
+
 int RunServer(int port);
 
 #endif

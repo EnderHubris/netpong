@@ -54,7 +54,7 @@ static void SignalPass(Ball* ball, int socket_fd) {
     write(socket_fd, passMsg, strlen(passMsg));
 }
 
-static void HideBall(Ball* ball) {
+void HideBall(Ball* ball) {
     ball->x = WIDTH/2;
     ball->y = HEIGHT/2;
 
@@ -87,10 +87,10 @@ void checkCollision(Ball* ball, int playerId, int socket_fd) {
 }
 
 void hitPaddle(Ball* ball) {
-    ball->velx = -1;
+    ball->velx *= -1;
 
-    int dirY = ball->vely / ball->vely;
-    ball->vely = getRandomDir(MAX_VEL_Y) * -dirY;
+    // int dirY = ball->vely / ball->vely;
+    // ball->vely = getRandomDir(MAX_VEL_Y) * -dirY;
 
     // make the ball move faster on screen
     int tick_rate = TICKS_PER_SEC + (rand() % 11);

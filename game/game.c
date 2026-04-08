@@ -3,6 +3,15 @@
 
 // initialize pongState from game.h definition
 Pong pongState = { 0 };
+char* scoreText = NULL;
+
+static void SendMissSignal(int socket_fd) {
+    char scoreMsg[124];
+    snprintf(scoreMsg, sizeof(scoreMsg), "SCORE %d\n",
+        (pongState.playerId + 1) % 2
+    );
+    write(socket_fd, scoreMsg, strlen(scoreMsg));
+}
 
 static void beginGame() {
     pongState.running = 1;
@@ -10,6 +19,10 @@ static void beginGame() {
 
 static void refreshCourt() {
     refresh();
+
+    // clear the window scene
+    werase(pongState.scene);
+    // redraw the game boundary
     box(pongState.scene, 0, 0);
 
     // remove one of the columns
@@ -24,6 +37,19 @@ static void refreshCourt() {
         }
     }
 
+    // draw the ball on screen if it has a valid velocity
+    if (pongState.ball && pongState.ball->velx != 0 && pongState.ball->vely != 0) {
+        mvwaddch(pongState.scene, pongState.ball->y, pongState.ball->x, 'O');
+    }
+
+    // display score on screen
+    /*
+    werase(pongState.scoreWind);
+    mvwprintw(pongState.scoreWind, 0, WIDTH/2, "%s", scoreText ? scoreText : "0:0");
+    wrefresh(pongState.scoreWind);
+    */
+
+    // refresh window contents
     wrefresh(pongState.scene);
 }
 
@@ -65,6 +91,19 @@ void checkForChange() {
                 pongState.ball->y = ballData[1];
                 pongState.ball->velx = ballData[2];
                 pongState.ball->vely = ballData[3];
+            } else if (res.stringCount == 2 && strcmp(res.strs[0], "SCORE") == 0) {
+                if (scoreText) {
+                    free(scoreText); // free dynamic memory if needed
+                    scoreText = NULL; // prevent use-after-free
+                }
+
+                int sLen = strlen(res.strs[1]) + 1; // room for null-terminating
+                scoreText = malloc(sLen);
+                strncpy(scoreText, res.strs[1], sLen-1); // cp string into buffer
+                scoreText[sLen] = '\0';
+            } else if (strcmp(res.strs[0], "SERVE") == 0) {
+                reset(pongState.ball);
+                ++pongState.ballCount;
             }
         } else if (bytesRecv == 0) {
             // server closed the socket
@@ -113,6 +152,7 @@ void setup(int playerId, char* hostStr, int port) {
     
     // draw the game area box (h,w,y,x)
     pongState.scene = newwin(HEIGHT,WIDTH,0,0);
+    pongState.scoreWind = newwin(2, WIDTH, HEIGHT, 0);
     
     refreshCourt();
 
@@ -153,9 +193,16 @@ void closeGame() {
  */
 void cleanCurses() {
     pongState.running = 0;
-    if (pongState.scene) {
-        delwin(pongState.scene);
-    }
+    
+    if (pongState.scene) delwin(pongState.scene);
+    if (pongState.scoreWind) delwin(pongState.scoreWind);
+    pongState.scene = pongState.scoreWind = NULL;
+
+    free(pongState.ball);
+    free(pongState.paddle);
+    pongState.ball = NULL;
+    pongState.paddle = NULL;
+
     endwin(); // Stop curses mode
 }
 
@@ -213,29 +260,36 @@ void ballHandle() {
     // disable the ballHandle execution from alarm signal
     signal(SIGALRM,SIG_IGN);
 
-    if (ball->velx != 0 && ball->vely != 0) {
-        for (int i = 0; i < abs(ball->velx); ++i) {
-            mvwaddch(pongState.scene,ball->y,ball->x,' ');
+    for (int i = 0; i < abs(ball->velx); ++i) {
+        mvwaddch(pongState.scene,ball->y,ball->x,' ');
+
+        // update the ball x position
+        if (ball->velx != 0 && ball->vely != 0) {
             ball->x += (ball->velx > 0) ? 1 : -1;
             mvwaddch(pongState.scene,ball->y,ball->x,'O');
-            
-            if (paddleContact(pongState.paddle, ball->x, ball->y)) {
-                hitPaddle(ball);
-            } else {
-                checkCollision(ball, pongState.playerId, pongState.socket_fd);
-            }
         }
-    
-        for (int i = 0; i < abs(ball->vely); ++i) {
-            mvwaddch(pongState.scene,ball->y,ball->x,' ');
+        
+        if (paddleContact(pongState.paddle, pongState.playerId, ball->x, ball->y)) {
+            hitPaddle(ball);
+        } else {
+            checkCollision(ball, pongState.playerId, pongState.socket_fd);
+        }
+    }
+
+    // update the ball y position
+    for (int i = 0; i < abs(ball->vely); ++i) {
+        mvwaddch(pongState.scene,ball->y,ball->x,' ');
+
+        if (ball->velx != 0 && ball->vely != 0) {
             ball->y += (ball->vely > 0) ? 1 : -1;
             mvwaddch(pongState.scene,ball->y,ball->x,'O');
         }
-    
-        if (!ballInPlay(ball)) {
-            ++pongState.ballCount;
-            reset(ball);
-        }
+    }
+
+    if (!ballInPlay(ball)) {
+        ++pongState.ballCount;
+        SendMissSignal(pongState.socket_fd);
+        HideBall(pongState.ball);
     }
 
     refreshCourt();

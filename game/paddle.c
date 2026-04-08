@@ -31,11 +31,11 @@ void paddleDown(Paddle* paddle) {
 /**
  * returns 1 if the contact is valid, otherwise 0
  */
-int paddleContact(Paddle* paddle, int ballX, int ballY) {
+int paddleContact(Paddle* paddle, int playerId, int ballX, int ballY) {
     if (!paddle) return 0;
 
     // ensure ball is within the column in-front of the paddle
-    int containedX = ballX == paddle->x-1;
+    int containedX = (playerId == 1) ? (ballX == paddle->x-1) : (ballX == paddle->x+1);
 
     // ensure the ballY is contained within the paddle length
     int containedY = (

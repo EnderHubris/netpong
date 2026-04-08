@@ -22,6 +22,7 @@ typedef struct {
 } Ball;
 
 Ball* ballInit();
+void HideBall(Ball* ball);
 void reset(Ball* ball);
 void checkCollision(Ball* ball, int playerId, int socket_fd);
 void hitPaddle(Ball* ball);

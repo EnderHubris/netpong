@@ -23,6 +23,6 @@ typedef struct {
 Paddle* paddleInit();
 void paddleUp(Paddle* paddle);
 void paddleDown(Paddle* paddle);
-int paddleContact(Paddle* paddle, int ballX, int ballY);
+int paddleContact(Paddle* paddle, int playerId, int ballX, int ballY);
 
 #endif

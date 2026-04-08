@@ -23,7 +23,10 @@
 typedef struct {
     Paddle* paddle;
     Ball* ball;
+    
     WINDOW* scene;
+    WINDOW* scoreWind;
+
     int ballCount;
     int playerId;
     int socket_fd;
@@ -31,6 +34,7 @@ typedef struct {
 } Pong;
 
 extern Pong pongState;
+extern char* scoreText;
 
 int ballInPlay();
 
