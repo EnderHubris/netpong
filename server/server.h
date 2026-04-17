@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <sys/mman.h>
 
+#include "../game/rules.h"
 #include "../utils.h"
 
 #define BUFF_LEN 1024

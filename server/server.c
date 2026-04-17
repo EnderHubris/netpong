@@ -84,6 +84,28 @@ static void SendServe(int socket_fd) {
     }
 }
 
+static void SendGameOver(int socket_fd) {
+    char msg[124];
+    snprintf(msg, sizeof(msg), "GAMEOVER \n");
+    write(socket_fd, msg, strlen(msg));
+
+    // file write
+    if (socket_fd == pserver->clients[0]) {
+        fprintf(logFile, "> %s", msg);
+    }
+}
+
+static void SendWinHeader(int socket_fd) {
+    char msg[124];
+    snprintf(msg, sizeof(msg), "WINNER %d\n", ( GameScore[0] == GAMEOVER ) ? 0 : 1 );
+    write(socket_fd, msg, strlen(msg));
+
+    // file write
+    if (socket_fd == pserver->clients[0]) {
+        fprintf(logFile, "> %s", msg);
+    }
+}
+
 // thread target for listening to incoming client msgs
 static void ListenForClient(int client, int playerId) {
     char* msg = "Hello from server!";
@@ -121,6 +143,17 @@ static void ListenForClient(int client, int playerId) {
 
             SendScore(pserver->clients[0]);
             SendScore(pserver->clients[1]);
+
+            if ( GameScore[0] >= GAMEOVER || GameScore[1] >= GAMEOVER ) {
+                SendWinHeader(pserver->clients[1]);
+                SendWinHeader(pserver->clients[0]);
+
+                sleep(3); // give player time to see end-game message
+
+                SendGameOver(pserver->clients[1]);
+                SendGameOver(pserver->clients[0]);
+                continue;
+            }
 
             // round victor re-serves the ball
             SendServe(pserver->clients[victorId]);

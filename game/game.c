@@ -18,7 +18,15 @@ static void beginGame() {
     pongState.running = 1;
 }
 
+static void showCloseHeader(int winner) {
+    wrefresh(pongState.scene);
+    mvwprintw(pongState.scene, HEIGHT/2, WIDTH/2, "%s", winner ? "YOU WIN" : "YOU LOSE");
+    wrefresh(pongState.scene);
+}
+
 static void refreshCourt() {
+    if (!pongState.update) return;
+
     refresh();
 
     // clear the window scene
@@ -101,14 +109,15 @@ void checkForChange() {
                     pongState.ballCount = atoi(res.strs[2]);
                 }
 
-                // update game state knowledge of score
-                pongState.score[0] = atoi(res.strs[1]);
-                pongState.score[1] = atoi(res.strs[2]);
-
                 // update buffer
                 snprintf(scoreText, sizeof(scoreText), "%s:%s", res.strs[1], res.strs[2]);
             } else if (strcmp(res.strs[0], "SERVE") == 0) {
                 serve(pongState.playerId);
+            } else if (strcmp(res.strs[0], "GAMEOVER") == 0) {
+                pongState.running = 0;
+            } else if (res.stringCount == 2 && strcmp(res.strs[0], "WINNER") == 0) {
+                pongState.update = 0;
+                showCloseHeader( pongState.playerId == atoi(res.strs[1]) );
             }
         } else if (bytesRecv == 0) {
             // server closed the socket
@@ -127,6 +136,8 @@ void checkForChange() {
  * the center of the screen
  */
 void setup(int playerId, char* hostStr, int port) {
+    pongState.update = 1;
+
     // initialize game state components
     pongState.paddle = paddleInit(playerId);
 
@@ -143,6 +154,8 @@ void setup(int playerId, char* hostStr, int port) {
         while (!pongState.running) {
             pause();
         }
+    } else {
+        beginGame();
     }
 
     plogFile = fopen("player.log", "w");
@@ -229,8 +242,7 @@ void cleanCurses() {
 int gameRunning(int* ch) {
     // grab player input
     *ch = getch(); // curses version of getchar
-    int noWinner = (pongState.score[0] < GAMEOVER) && (pongState.score[1] < GAMEOVER);
-    return noWinner && ( *ch != (int)'q' );
+    return pongState.running && ( *ch != (int)'q' );
 }
 int ballInPlay() {
     int inPlay = (pongState.playerId == 1) ? (
