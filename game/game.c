@@ -3,7 +3,7 @@
 
 // initialize pongState from game.h definition
 Pong pongState = { 0 };
-char* scoreText = NULL;
+char scoreText[64] = {0};
 
 static void SendMissSignal(int socket_fd) {
     char scoreMsg[124];
@@ -43,11 +43,9 @@ static void refreshCourt() {
     }
 
     // display score on screen
-    /*
     werase(pongState.scoreWind);
-    mvwprintw(pongState.scoreWind, 0, WIDTH/2, "%s", scoreText ? scoreText : "0:0");
+    mvwprintw(pongState.scoreWind, 0, WIDTH/2, "%s", strlen(scoreText) > 0 ? scoreText : "0:0");
     wrefresh(pongState.scoreWind);
-    */
 
     // refresh window contents
     wrefresh(pongState.scene);
@@ -91,19 +89,17 @@ void checkForChange() {
                 pongState.ball->y = ballData[1];
                 pongState.ball->velx = ballData[2];
                 pongState.ball->vely = ballData[3];
-            } else if (res.stringCount == 2 && strcmp(res.strs[0], "SCORE") == 0) {
-                if (scoreText) {
-                    free(scoreText); // free dynamic memory if needed
-                    scoreText = NULL; // prevent use-after-free
+            } else if (res.stringCount == 3 && strcmp(res.strs[0], "SCORE") == 0) {
+                if (pongState.playerId == 0) {
+                    pongState.ballCount = atoi(res.strs[1]);
+                } else {
+                    pongState.ballCount = atoi(res.strs[2]);
                 }
 
-                int sLen = strlen(res.strs[1]) + 1; // room for null-terminating
-                scoreText = malloc(sLen);
-                strncpy(scoreText, res.strs[1], sLen-1); // cp string into buffer
-                scoreText[sLen] = '\0';
+                // update buffer
+                snprintf(scoreText, sizeof(scoreText), "%s:%s", res.strs[1], res.strs[2]);
             } else if (strcmp(res.strs[0], "SERVE") == 0) {
                 reset(pongState.ball);
-                ++pongState.ballCount;
             }
         } else if (bytesRecv == 0) {
             // server closed the socket
@@ -287,7 +283,6 @@ void ballHandle() {
     }
 
     if (!ballInPlay(ball)) {
-        ++pongState.ballCount;
         SendMissSignal(pongState.socket_fd);
         HideBall(pongState.ball);
     }

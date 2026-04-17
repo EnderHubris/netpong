@@ -34,7 +34,7 @@ typedef struct {
 } Pong;
 
 extern Pong pongState;
-extern char* scoreText;
+extern char scoreText[64];
 
 int ballInPlay();
 

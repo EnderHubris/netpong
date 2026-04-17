@@ -2,3 +2,4 @@ pong
 *.o
 *.swp
 cli.h
+*.log

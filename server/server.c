@@ -2,7 +2,10 @@
 
 Server* pserver = NULL;
 int running = 1;
-int GameScore[2] = { 0,0 };
+int* GameScore = NULL;
+
+// debug file
+FILE* logFile = NULL;
 
 static void serverKill() {
     running = 0;
@@ -49,11 +52,16 @@ static void PassBall(int ballData[4], int socket_fd) {
  */
 static void SendScore(int socket_fd) {
     char scoreMsg[124];
-    snprintf(scoreMsg, sizeof(scoreMsg), "SCORE %d:%d\n",
+    snprintf(scoreMsg, sizeof(scoreMsg), "SCORE %d %d\n",
         GameScore[0],
         GameScore[1]
     );
     write(socket_fd, scoreMsg, strlen(scoreMsg));
+
+    // file write
+    if (socket_fd == pserver->clients[0]) {
+        fprintf(logFile, "> %s", scoreMsg);
+    }
 }
 
 /**
@@ -134,6 +142,18 @@ static void ListenForClient(int client, int playerId) {
 int RunServer(int port) {
     Server server = {0};
     pserver = &server;
+
+    // create log file for debugging
+    logFile = fopen("debug.log", "w");
+    setvbuf(logFile, NULL, _IONBF, 0);
+
+    // create a patch of memory the parent and child procs
+    // share similar to the producer-consumer problem
+    GameScore = mmap(NULL, 2 * sizeof(int),
+        PROT_READ | PROT_WRITE,
+        MAP_SHARED | MAP_ANONYMOUS,
+        -1, 0);
+    GameScore[0] = GameScore[1] = 0;
 
     int opt = 1;
     socklen_t addrlen = sizeof(server.address);

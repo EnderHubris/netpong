@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
 
 #include "../utils.h"
 
@@ -27,7 +28,7 @@ typedef struct {
 extern Server* pserver;
 extern int running;
 
-extern int GameScore[2];
+extern int* GameScore;
 
 int RunServer(int port);
 
