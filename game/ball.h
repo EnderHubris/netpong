@@ -27,4 +27,7 @@ void reset(Ball* ball);
 void checkCollision(Ball* ball, int playerId, int socket_fd);
 void hitPaddle(Ball* ball);
 
+int getRandomDir(int max);
+int getRandomSignedDir(int max);
+
 #endif

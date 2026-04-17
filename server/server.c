@@ -44,6 +44,11 @@ static void PassBall(int ballData[4], int socket_fd) {
         ballData[3]
     );
     write(socket_fd, passMsg, strlen(passMsg));
+
+    // file write
+    if (socket_fd == pserver->clients[0]) {
+        fprintf(logFile, "> %s", passMsg);
+    }
 }
 
 /**
@@ -72,6 +77,11 @@ static void SendServe(int socket_fd) {
     char reserveMsg[124];
     snprintf(reserveMsg, sizeof(reserveMsg), "SERVE \n");
     write(socket_fd, reserveMsg, strlen(reserveMsg));
+
+    // file write
+    if (socket_fd == pserver->clients[0]) {
+        fprintf(logFile, "> %s", reserveMsg);
+    }
 }
 
 // thread target for listening to incoming client msgs
@@ -144,7 +154,7 @@ int RunServer(int port) {
     pserver = &server;
 
     // create log file for debugging
-    logFile = fopen("debug.log", "w");
+    logFile = fopen("server.log", "w");
     setvbuf(logFile, NULL, _IONBF, 0);
 
     // create a patch of memory the parent and child procs

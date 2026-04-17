@@ -4,6 +4,7 @@
 // initialize pongState from game.h definition
 Pong pongState = { 0 };
 char scoreText[64] = {0};
+FILE* plogFile = NULL;
 
 static void SendMissSignal(int socket_fd) {
     char scoreMsg[124];
@@ -76,6 +77,10 @@ void checkForChange() {
             // [ TYPE DATA ]
             if (res.stringCount == 0) return;
 
+            char bb[516] = {0};
+            snprintf(bb, sizeof(bb), "[PLAYER %d] %s", pongState.playerId+1, buf);
+            fprintf(plogFile, "> %s", bb);
+
             if (res.stringCount == 5 && strcmp(res.strs[0], "BALL") == 0) {
                 int ballData[4] = {0};
                 for (int i = 0; i < 4; ++i) {
@@ -96,10 +101,14 @@ void checkForChange() {
                     pongState.ballCount = atoi(res.strs[2]);
                 }
 
+                // update game state knowledge of score
+                pongState.score[0] = atoi(res.strs[1]);
+                pongState.score[1] = atoi(res.strs[2]);
+
                 // update buffer
                 snprintf(scoreText, sizeof(scoreText), "%s:%s", res.strs[1], res.strs[2]);
             } else if (strcmp(res.strs[0], "SERVE") == 0) {
-                reset(pongState.ball);
+                serve(pongState.playerId);
             }
         } else if (bytesRecv == 0) {
             // server closed the socket
@@ -136,6 +145,9 @@ void setup(int playerId, char* hostStr, int port) {
         }
     }
 
+    plogFile = fopen("player.log", "w");
+    setvbuf(plogFile, NULL, _IONBF, 0);
+
     // initialize curses mode
     initscr();              // Start curses mode
     cbreak();               // Disable line buffering
@@ -161,6 +173,7 @@ void setup(int playerId, char* hostStr, int port) {
  * direction
  */
 void serve(int playerId) {
+
     // put the ball at mid-point of game
     // and serve with random velocity
     if (!pongState.ball) {
@@ -171,7 +184,14 @@ void serve(int playerId) {
             // hides the ball for player 2 visually
             pongState.ball->velx = pongState.ball->vely = 0;
         }
+    } else {
+        // player 1 serve moves left
+        // player 2 serve moves right
+        int velx = getRandomDir(MAX_VEL_X) * ((pongState.playerId == 0) ? 1 : -1);
+        pongState.ball->velx = velx;
+        pongState.ball->vely = getRandomSignedDir(MAX_VEL_Y);
     }
+
     setTicker(1000/TICKS_PER_SEC);
 }
 
@@ -203,12 +223,14 @@ void cleanCurses() {
 }
 
 /**
- *
+ * Game closes when a player's score reaches GAMEOVER value
+ * or if a player quits
  */
 int gameRunning(int* ch) {
     // grab player input
     *ch = getch(); // curses version of getchar
-    return (pongState.ballCount < GAMEOVER) && ( *ch != (int)'q' );
+    int noWinner = (pongState.score[0] < GAMEOVER) && (pongState.score[1] < GAMEOVER);
+    return noWinner && ( *ch != (int)'q' );
 }
 int ballInPlay() {
     int inPlay = (pongState.playerId == 1) ? (

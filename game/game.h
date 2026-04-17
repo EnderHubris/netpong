@@ -31,6 +31,8 @@ typedef struct {
     int playerId;
     int socket_fd;
     int running;
+
+    int score[2];
 } Pong;
 
 extern Pong pongState;

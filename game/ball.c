@@ -1,12 +1,12 @@
 #include "ball.h"
 
 // returns only positive
-static int getRandomDir(int max) {
+int getRandomDir(int max) {
     return (rand() % max) + 1;
 }
 
 // returns positive or negative
-static int getRandomSignedDir(int max) {
+int getRandomSignedDir(int max) {
     int rDir = getRandomDir(max);
     return (rand() % 5 == 2) ? rDir : -rDir;
 }
@@ -27,20 +27,6 @@ Ball* ballInit() {
     ball->vely = getRandomSignedDir(MAX_VEL_Y);
 
     return ball;
-}
-
-/**
- * reset the ball to origin and
- * give it a new initial random vel
- */
-void reset(Ball* ball) {
-    if (!ball) return;
-
-    ball->x = ball->originX;
-    ball->y = ball->originY;
-
-    ball->velx = getRandomDir(MAX_VEL_X);
-    ball->vely = getRandomSignedDir(MAX_VEL_Y);
 }
 
 static void SignalPass(Ball* ball, int socket_fd) {
