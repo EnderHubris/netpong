@@ -7,7 +7,7 @@ char scoreText[64] = {0};
 FILE* plogFile = NULL;
 
 static void SendMissSignal(int socket_fd) {
-    char scoreMsg[124];
+    char scoreMsg[256];
     snprintf(scoreMsg, sizeof(scoreMsg), "SCORE %d\n",
         (pongState.playerId + 1) % 2
     );
@@ -15,7 +15,7 @@ static void SendMissSignal(int socket_fd) {
 }
 
 static void SendExitSignal(int socket_fd) {
-    char scoreMsg[124];
+    char scoreMsg[256];
     snprintf(scoreMsg, sizeof(scoreMsg), "PLAYER_LEFT %d\n",
         pongState.playerId
     );
@@ -79,7 +79,7 @@ void checkForChange() {
     // whether of not the socket is ready for reading
     int r = select(pongState.socket_fd+1, &readfds, NULL, NULL, &tv);
 
-    char buf[128];
+    char buf[256];
 
     if (r > 0 && FD_ISSET(pongState.socket_fd, &readfds)) {
         ssize_t bytesRecv = read(pongState.socket_fd, buf, sizeof(buf)-1);
@@ -97,9 +97,9 @@ void checkForChange() {
             snprintf(bb, sizeof(bb), "[PLAYER %d] %s", pongState.playerId+1, buf);
             fprintf(plogFile, "> %s", bb);
 
-            if (res.stringCount == 5 && strcmp(res.strs[0], "BALL") == 0) {
-                int ballData[4] = {0};
-                for (int i = 0; i < 4; ++i) {
+            if (res.stringCount == 6 && strcmp(res.strs[0], "BALL") == 0) {
+                int ballData[5] = {0};
+                for (int i = 0; i < 5; ++i) {
                     ballData[i] = atoi(res.strs[i+1]);
                 }
 
@@ -110,6 +110,10 @@ void checkForChange() {
                 pongState.ball->y = ballData[1];
                 pongState.ball->velx = ballData[2];
                 pongState.ball->vely = ballData[3];
+                pongState.ball->tick_rate = ballData[4];
+
+                // update speed when ball data recv'd
+                setTicker(1000/pongState.ball->tick_rate);
             } else if (res.stringCount == 3 && strcmp(res.strs[0], "SCORE") == 0) {
                 if (pongState.playerId == 0) {
                     pongState.ballCount = atoi(res.strs[1]);
@@ -212,6 +216,7 @@ void serve(int playerId) {
         int velx = getRandomDir(MAX_VEL_X) * ((pongState.playerId == 0) ? 1 : -1);
         pongState.ball->velx = velx;
         pongState.ball->vely = getRandomSignedDir(MAX_VEL_Y);
+        pongState.ball->tick_rate = TICKS_PER_SEC;
     }
 
     setTicker(1000/TICKS_PER_SEC);

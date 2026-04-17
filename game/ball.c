@@ -26,16 +26,19 @@ Ball* ballInit() {
     ball->velx = getRandomDir(MAX_VEL_X);
     ball->vely = getRandomSignedDir(MAX_VEL_Y);
 
+    ball->tick_rate = TICKS_PER_SEC;
+
     return ball;
 }
 
 static void SignalPass(Ball* ball, int socket_fd) {
-    char passMsg[124];
-    snprintf(passMsg, sizeof(passMsg), "PASS %d %d %d %d\n",
+    char passMsg[256];
+    snprintf(passMsg, sizeof(passMsg), "PASS %d %d %d %d %d\n",
         ball->x,
         ball->y,
         ball->velx,
-        ball->vely
+        ball->vely,
+        ball->tick_rate
     );
     write(socket_fd, passMsg, strlen(passMsg));
 }
@@ -75,10 +78,7 @@ void checkCollision(Ball* ball, int playerId, int socket_fd) {
 void hitPaddle(Ball* ball) {
     ball->velx *= -1;
 
-    // int dirY = ball->vely / ball->vely;
-    // ball->vely = getRandomDir(MAX_VEL_Y) * -dirY;
-
     // make the ball move faster on screen
-    int tick_rate = TICKS_PER_SEC + (rand() % 11);
-    setTicker(1000/tick_rate);
+    ball->tick_rate = TICKS_PER_SEC + (rand() % 11);
+    setTicker(1000/ball->tick_rate);
 }

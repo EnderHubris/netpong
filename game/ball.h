@@ -19,6 +19,8 @@ typedef struct {
 
     int velx;
     int vely;
+
+    int tick_rate;
 } Ball;
 
 Ball* ballInit();

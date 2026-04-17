@@ -35,13 +35,14 @@ static void serverKill() {
  * Sends the current position of the ball in a player's court
  * after a pass is initiated
  */
-static void PassBall(int ballData[4], int socket_fd) {
-    char passMsg[124];
-    snprintf(passMsg, sizeof(passMsg), "BALL %d %d %d %d\n",
-        ballData[0],
-        ballData[1],
-        ballData[2],
-        ballData[3]
+static void PassBall(int ballData[5], int socket_fd) {
+    char passMsg[256];
+    snprintf(passMsg, sizeof(passMsg), "BALL %d %d %d %d %d\n",
+        ballData[0],    // x
+        ballData[1],    // y
+        ballData[2],    // velx
+        ballData[3],    // vely
+        ballData[4]     // tick_speed
     );
     write(socket_fd, passMsg, strlen(passMsg));
 
@@ -56,7 +57,7 @@ static void PassBall(int ballData[4], int socket_fd) {
  * a player socket
  */
 static void SendScore(int socket_fd) {
-    char scoreMsg[124];
+    char scoreMsg[256];
     snprintf(scoreMsg, sizeof(scoreMsg), "SCORE %d %d\n",
         GameScore[0],
         GameScore[1]
@@ -74,7 +75,7 @@ static void SendScore(int socket_fd) {
  * a score update
  */
 static void SendServe(int socket_fd) {
-    char reserveMsg[124];
+    char reserveMsg[256];
     snprintf(reserveMsg, sizeof(reserveMsg), "SERVE \n");
     write(socket_fd, reserveMsg, strlen(reserveMsg));
 
@@ -85,7 +86,7 @@ static void SendServe(int socket_fd) {
 }
 
 static void SendGameOver(int socket_fd) {
-    char msg[124];
+    char msg[256];
     snprintf(msg, sizeof(msg), "GAMEOVER \n");
     write(socket_fd, msg, strlen(msg));
 
@@ -96,7 +97,7 @@ static void SendGameOver(int socket_fd) {
 }
 
 static void SendWinHeader(int socket_fd) {
-    char msg[124];
+    char msg[256];
     snprintf(msg, sizeof(msg), "WINNER %d\n", ( GameScore[0] == GAMEOVER ) ? 0 : 1 );
     write(socket_fd, msg, strlen(msg));
 
@@ -158,11 +159,11 @@ static void ListenForClient(int client, int playerId) {
             // round victor re-serves the ball
             SendServe(pserver->clients[victorId]);
         } else if (strcmp("PASS", res.strs[0]) == 0) {
-            if (res.stringCount != 5) continue;
+            if (res.stringCount != 6) continue;
 
-            // extract ball data [1:4]
-            int ballData[4] = {0};
-            for (int i = 0; i < 4; ++i) {
+            // extract ball data [1:5]
+            int ballData[5] = {0};
+            for (int i = 0; i < 5; ++i) {
                 ballData[i] = atoi(res.strs[i+1]);
             }
 
