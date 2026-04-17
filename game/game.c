@@ -14,6 +14,14 @@ static void SendMissSignal(int socket_fd) {
     write(socket_fd, scoreMsg, strlen(scoreMsg));
 }
 
+static void SendExitSignal(int socket_fd) {
+    char scoreMsg[124];
+    snprintf(scoreMsg, sizeof(scoreMsg), "PLAYER_LEFT %d\n",
+        pongState.playerId
+    );
+    write(socket_fd, scoreMsg, strlen(scoreMsg));
+}
+
 static void beginGame() {
     pongState.running = 1;
 }
@@ -116,6 +124,7 @@ void checkForChange() {
             } else if (strcmp(res.strs[0], "GAMEOVER") == 0) {
                 pongState.running = 0;
             } else if (res.stringCount == 2 && strcmp(res.strs[0], "WINNER") == 0) {
+                pongState.ball->velx = pongState.ball->vely = 0;
                 pongState.update = 0;
                 showCloseHeader( pongState.playerId == atoi(res.strs[1]) );
             }
@@ -242,7 +251,12 @@ void cleanCurses() {
 int gameRunning(int* ch) {
     // grab player input
     *ch = getch(); // curses version of getchar
-    return pongState.running && ( *ch != (int)'q' );
+    
+    if (*ch == (int)'q') {
+        SendExitSignal(pongState.socket_fd);
+    }
+
+    return pongState.running;
 }
 int ballInPlay() {
     int inPlay = (pongState.playerId == 1) ? (

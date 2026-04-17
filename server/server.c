@@ -175,6 +175,24 @@ static void ListenForClient(int client, int playerId) {
                 ballData[0] = 68; // rules.h (WIDTH-2)
                 PassBall(ballData, pserver->clients[0]);
             }
+        } else if (strcmp("PLAYER_LEFT", res.strs[0]) == 0) {
+            if (res.stringCount != 2) continue;
+
+            if (atoi(res.strs[1]) == 0) {
+                // player 1 left => player 2 wins
+                GameScore[1] = GAMEOVER;
+            } else {
+                // player 2 left => player 1 wins
+                GameScore[0] = GAMEOVER;
+            }
+
+            SendWinHeader(pserver->clients[1]);
+            SendWinHeader(pserver->clients[0]);
+
+            sleep(3); // give player time to see end-game message
+
+            SendGameOver(pserver->clients[1]);
+            SendGameOver(pserver->clients[0]);
         }
     }
 
