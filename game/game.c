@@ -33,9 +33,14 @@ static void showCloseHeader(int winner) {
 }
 
 static void refreshCourt() {
-    if (!pongState.update) return;
-
     refresh();
+    
+    // display score on screen
+    werase(pongState.scoreWind);
+    mvwprintw(pongState.scoreWind, 0, WIDTH/2, "%s", strlen(scoreText) > 0 ? scoreText : "0:0");
+    wrefresh(pongState.scoreWind);
+    
+    if (!pongState.update) return;
 
     // clear the window scene
     werase(pongState.scene);
@@ -58,11 +63,6 @@ static void refreshCourt() {
     if (pongState.ball && pongState.ball->velx != 0 && pongState.ball->vely != 0) {
         mvwaddch(pongState.scene, pongState.ball->y, pongState.ball->x, 'O');
     }
-
-    // display score on screen
-    werase(pongState.scoreWind);
-    mvwprintw(pongState.scoreWind, 0, WIDTH/2, "%s", strlen(scoreText) > 0 ? scoreText : "0:0");
-    wrefresh(pongState.scoreWind);
 
     // refresh window contents
     wrefresh(pongState.scene);
