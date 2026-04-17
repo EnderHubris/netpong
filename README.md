@@ -31,3 +31,9 @@ After compiling the program
 # connect to server on specific port
 ./pong -s 127.0.0.1 -p 1234
 ```
+### Screenshots
+<img src="./images/netpong.png" alt="Initial Game" width="800">
+<figcaption><i>Fig 1. Player 1 Serving the ball</i></figcaption><br>
+
+<img src="./images/netpong_2.png" alt="Game Over" width="800">
+<figcaption><i>Fig 2. Player 2 Wins</i></figcaption>
